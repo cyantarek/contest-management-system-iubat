@@ -5,7 +5,10 @@ from django.contrib import messages
 
 
 def index_view(request):
-	return redirect("/login/")
+	if not request.session.get("user_id"):
+		return redirect("/login/")
+	else:
+		return redirect("/contests/")
 
 
 def registration_view(request):
@@ -52,6 +55,7 @@ def login_view(request):
 			user = None
 		if user and user.password == request.POST["password"]:
 			request.session["user_id"] = user.user_id
+			return redirect("/contests/")
 		else:
 			messages.error(request, "Login error!")
 			return redirect("/login/")
@@ -92,16 +96,18 @@ def account_detail(request):
 	user = models.Member.objects.get(user_id=request.session["user_id"])
 	contests = user.contest.values_list("pk", flat=True)
 	solutions = models.Solution.objects.filter(participant_id=user.id)
-	print()
+	print(contests)
 	return render(request, "contest/account_detail.html", {"user": user})
 
 def ranking_list(request):
-	users = models.Member.objects.all().order_by("point")
+	users = models.Member.objects.all().order_by("-point")
 	return render(request, "contest/ranking_list.html", {"users": users})
 
 def submit_solution(request):
 	question = models.Question.objects.get(pk=request.POST["question_id"])
 	participant = models.Member.objects.get(user_id=request.session["user_id"])
+	contest = models.Contest.objects.get(pk=question.contest_id)
+	print(contest)
 	try:
 		solution_check = models.Solution.objects.get(question_id=question.id, participant_id=participant.id)
 	except:
