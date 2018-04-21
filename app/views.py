@@ -2,6 +2,8 @@ from django.shortcuts import render, redirect
 from . import models
 from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages
+import time
+from django.contrib.auth.models import Group, User
 
 
 def index_view(request):
@@ -14,7 +16,7 @@ def index_view(request):
 def registration_view(request):
 	if request.method == "POST":
 		try:
-			user_check = user = models.Member.objects.get(user_id=request.POST["id"])
+			user_check = models.Member.objects.get(user_id=request.POST["id"])
 		except:
 			user_check = None
 		if user_check:
@@ -37,10 +39,8 @@ def registration_view(request):
 			)
 			print(new_member.password)
 			new_member.password = request.POST["password1"]
-			if request.POST["user_type"] == "Participants":
-				new_member.is_participant = 1
-			elif request.POST["user_type"] == "Judge":
-				new_member.is_judge = 1
+			group = Group.objects.get(name="participant")
+			group.save()
 			new_member.save()
 			return redirect("/login/")
 
@@ -48,6 +48,8 @@ def registration_view(request):
 
 
 def login_view(request):
+	if request.session.get("user_id"):
+		return redirect("/contests/")
 	if request.method == "POST":
 		try:
 			user = models.Member.objects.get(user_id=request.POST["id"])
@@ -78,36 +80,68 @@ def recovery_view(request):
 
 
 def contest_list(request):
+	if not request.session.get("user_id"):
+		return redirect("/login/")
 	contests = models.Contest.objects.all()
 	return render(request, "contest/contestlist.html", {"contests": contests})
 
 
-def question_list(request, id):
+def question_detail(request, id):
+	if not request.session.get("user_id"):
+		return redirect("/login/")
 	question = models.Question.objects.get(pk=id)
 	return render(request, "contest/question_detail.html", {"question": question})
 
 
 def contest_detail(request, id):
+	if not request.session.get("user_id"):
+		return redirect("/login/")
+
+	now = time.ctime()
+	print(now)
 	contest = models.Contest.objects.get(id=id)
+	contest_time = contest.contest_date
+	print(contest_time)
 	questions = models.Question.objects.filter(contest_id=contest.id)
 	return render(request, "contest/contest_detail.html", {"questions": questions, "contest_name": contest.name})
 
 def account_detail(request):
+	if not request.session.get("user_id"):
+		return redirect("/login/")
 	user = models.Member.objects.get(user_id=request.session["user_id"])
-	contests = user.contest.values_list("pk", flat=True)
+	#contests = user.contests.values_list("pk", flat=True)
 	solutions = models.Solution.objects.filter(participant_id=user.id)
+	#print(contests)
+	contests = user.contestpoint_set.count()
 	print(contests)
 	return render(request, "contest/account_detail.html", {"user": user})
 
 def ranking_list(request):
-	users = models.Member.objects.all().order_by("-point")
+	if not request.session.get("user_id"):
+		return redirect("/login/")
+	users = models.Member.objects.all().order_by("-total_point")
 	return render(request, "contest/ranking_list.html", {"users": users})
 
+def ranking_list_contest(request, id):
+	if not request.session.get("user_id"):
+		return redirect("/login/")
+	contest = models.Contest.objects.get(pk=id)
+	users = contest.member_set.count()
+	a = models.ContestPoint.objects.filter(contest=contest).order_by("-point").order_by("-submission_date")
+	return render(request, "contest/ranking_list_contest.html", {"contest_data": a, "contest": contest})
+
+def report_generate(request, id):
+	contest = models.Contest.objects.get(pk=id)
+	a = models.ContestPoint.objects.filter(contest=contest).order_by("-point").order_by("-submission_date")
+	return render(request, "contest/report.html", {"contest_data": a, "contest": contest})
+
 def submit_solution(request):
+	if not request.session.get("user_id"):
+		return redirect("/login/")
 	question = models.Question.objects.get(pk=request.POST["question_id"])
 	participant = models.Member.objects.get(user_id=request.session["user_id"])
 	contest = models.Contest.objects.get(pk=question.contest_id)
-	print(contest)
+	print(request.session["user_id"])
 	try:
 		solution_check = models.Solution.objects.get(question_id=question.id, participant_id=participant.id)
 	except:
@@ -117,23 +151,21 @@ def submit_solution(request):
 		messages.error(request, "Sorry, you already submitted the solution!")
 		return redirect(request.META["HTTP_REFERER"])
 
-	if request.POST["solution"] != question.correct_ans:
-		messages.error(request, "Sorry, your solution is not correct!")
-		return redirect(request.META["HTTP_REFERER"])
-
-	elif request.POST["solution"] != question.correct_ans:
-		messages.error(request, "Sorry, your solution is not correct!")
-		return redirect(request.META["HTTP_REFERER"])
 	else:
 		solution = models.Solution.objects.create(
 			question=question,
 			participant=participant,
 			body=request.POST["solution"]
 		)
-		participant.point += question.point
-		participant.save()
-		messages.success(request, "Your solution submitetd successfully")
-		return redirect(request.META["HTTP_REFERER"])
+		a = models.ContestPoint.objects.create(contest=contest, member=participant)
+		#contest.member_set.add(participant)
+		if request.POST["solution"] == question.correct_ans:
+			a.point = question.point
+			participant.total_point += question.point
+			a.save()
+			participant.save()
+	messages.success(request, "Your solution submitetd successfully")
+	return redirect(request.META["HTTP_REFERER"])
 
 
 

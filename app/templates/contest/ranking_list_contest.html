@@ -2,7 +2,7 @@
 
 {% block content %}
 
-<h2 align="center">Ranking</h2>
+<h2 align="center">Ranking for {{contest_data.0.contest.name}}</h2>
 
 <div class="table-responsive">
     <table class="table table-bordered table-striped">
@@ -14,11 +14,11 @@
             </tr>
         </thead>
         <tbody>
-            {% for u in users %}
+            {% for c in contest_data %}
             <tr>
                 <td>{{ forloop.counter }}</td>
-                <td>{{ u.first_name }} {{ u.last_name }}</td>
-                <td>{{ u.total_point }}</td>
+                <td>{{ c.member.first_name }} {{ c.member.last_name }}</td>
+                <td>{{ c.point }}</td>
             </tr>
             {% endfor %}
         </tbody>

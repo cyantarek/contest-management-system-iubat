@@ -12,6 +12,7 @@
                 <th>Name</th>
                 <th>Date</th>
                 <th>Total Questions</th>
+                <th>Report</th>
             </tr>
         </thead>
         <tbody>
@@ -21,6 +22,8 @@
                 <td><a href="{{ c.id }}/">{{ c.name }}</a></td>
                 <td>{{ c.contest_date }}</td>
                 <td>{{ c.question_set.count }}</td>
+                <!--<td><a href="/ranking_contest/{{c.id}}/">View Ranks</a></td>-->
+                <td><a href="/report_generate/{{c.id}}/">View Report</a></td>
             </tr>
             {% endfor %}
         </tbody>

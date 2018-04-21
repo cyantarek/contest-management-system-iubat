@@ -1,0 +1,33 @@
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+</head>
+
+<body>
+<h2 align="center">{{contest_data.0.contest.name}}</h2>
+<h3 align="center">{{contest_data.0.contest.contest_date}}</h3>
+<h4 align="center">Winner - {{contest_data.0.member.first_name}} {{contest_data.0.member.last_name}}</h4>
+
+    <table align="center" class="table table-bordered" width=50% style="width:50%">
+        <thead>
+            <tr>
+                <th>Sl</th>
+                <th>Name</th>
+                <th>Question</th>
+                <th>Point</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in contest_data %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ c.member.first_name }} {{ c.member.last_name }}</td>
+                <td>Question {{ forloop.counter }}</td>
+                <td>{{ c.point }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+    <h4 align="center"><button onclick="window.print();return false;">Print Report</button>
+</h4>
+</body>

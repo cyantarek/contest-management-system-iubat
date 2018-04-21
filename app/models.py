@@ -17,22 +17,27 @@ class Member(models.Model):
 	password = models.CharField(max_length=100, blank=True, null=True)
 	is_participant = models.BooleanField(default=False)
 	user_id = models.CharField(max_length=8, default='')
-	contest = models.ManyToManyField(Contest)
-	point = models.FloatField(default=0)
+	contests = models.ManyToManyField(Contest, through="ContestPoint", blank=True, null=True)
+	total_point = models.IntegerField(default=0)
 	date_joined = models.DateTimeField(auto_now_add=True, blank=True, null=True)
 
 	def __str__(self):
 		return self.first_name + self.last_name
 
+class ContestPoint(models.Model):
+	contest = models.ForeignKey(Contest, on_delete=models.CASCADE)
+	member = models.ForeignKey(Member, on_delete=models.CASCADE)
+	point = models.IntegerField(default=0)
+	submission_date = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+
 class Question(models.Model):
 	body = models.TextField()
 	name = models.CharField(max_length=100)
 	input = models.TextField()
-	output = models.TextField()
 	samples = models.TextField()
 	point = models.IntegerField()
 	correct_ans = models.TextField()
-	judge = models.ForeignKey(Member, on_delete=models.CASCADE)
+	judge = models.ForeignKey(User, on_delete=models.CASCADE)
 	contest = models.ForeignKey(Contest, on_delete=models.CASCADE)
 
 class Solution(models.Model):
