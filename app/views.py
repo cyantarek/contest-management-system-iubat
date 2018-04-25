@@ -1,180 +1,206 @@
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
-from . import models
 from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages
 import time
-from django.contrib.auth.models import Group, User
+import re
+import redis
+from django.db import connection
+from .tasks import email_service
+from .utils import uuid_gen
+
+cur = connection.cursor()
+
+r = redis.Redis(host="localhost", port="6379", db="1")
 
 
-def index_view(request):
-	if not request.session.get("user_id"):
-		return redirect("/login/")
+def registration_participant(request, user_type):
+	if user_type == "judge":
+		if request.method == "POST":
+			password = request.POST["password1"]
+			password2 = request.POST["password2"]
+			if len(password) < 8:
+				messages.error(request, "Password should be at least 8 characters")
+			else:
+				if password != password2:
+					messages.error(request, "Password did not match")
+				else:
+					if re.search(r'[A-Z]{1,3}', password) and \
+							re.search(r'[a-z]{1,3}', password) and \
+							re.search(r'[0-9]{1,3}', password) and \
+							re.search(r'[!@$&]{1,3}', password):
+						cur.execute("SELECT * FROM judge WHERE user_id='%s' OR email='%s'" % (
+						request.POST["user_id"], request.POST["email"]))
+						user_check = cur.fetchall()
+						cur.execute("SELECT * FROM participant WHERE versity_id='%s' OR email='%s'" % (
+							request.POST["user_id"], request.POST["email"]))
+						user_check2 = cur.fetchall()
+						if len(user_check) > 0 or len(user_check2) > 0:
+							messages.error(request, "User already exists")
+						else:
+							cur.execute(
+								"INSERT INTO judge(f_name, l_name, user_id, password, join_date, is_admin, approved, email) VALUES('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')" % (
+									request.POST["f_name"], request.POST["l_name"], request.POST["user_id"],
+									request.POST["password1"], time.ctime(), 0, 0, request.POST["email"]))
+
+							full_name = request.POST["f_name"] + " " + request.POST["l_name"]
+							confirm_id = uuid_gen()
+							cur.execute(
+								"INSERT INTO email_activation(confirm_id, is_used, email) VALUES('%s', '%s', '%s')" % (
+								confirm_id, 0, request.POST["email"]))
+							email_service(request.POST["email"], full_name, user_type, confirm_id)
+							return redirect("/registration/success/")
+					else:
+						messages.error(request, "Password weak! Please follow the hint")
+		return render(request, "contest/registration_judge.html")
 	else:
-		return redirect("/contests/")
-
-
-def registration_view(request):
-	if request.method == "POST":
-		try:
-			user_check = models.Member.objects.get(user_id=request.POST["id"])
-		except:
-			user_check = None
-		if user_check:
-			messages.error(request, "User already exists!")
-			return redirect("/registration/")
-		elif request.POST["password1"] != request.POST["password2"]:
-			messages.error(request, "Password did not match!")
-			return redirect("/registration/")
-		elif request.POST["id"][4] != '3':
-			print(request.POST["id"][4])
-			messages.error(request, "You're not from CSE department")
-			return redirect("/registration/")
-		else:
-			print(request.POST)
-			new_member = models.Member.objects.create(
-				first_name=request.POST["f_name"],
-				last_name=request.POST["l_name"],
-				user_id=request.POST["id"],
-				recovery_id=request.POST["recovery_id"]
-			)
-			print(new_member.password)
-			new_member.password = request.POST["password1"]
-			group = Group.objects.get(name="participant")
-			group.save()
-			new_member.save()
-			return redirect("/login/")
-
-	return render(request, "contest/registration.html", {})
+		if request.method == "POST":
+			password = request.POST["password1"]
+			password2 = request.POST["password2"]
+			if len(password) < 8:
+				messages.error(request, "Password should be at least 8 characters")
+			else:
+				if password != password2:
+					messages.error(request, "Password did not match")
+				else:
+					if re.search(r'[A-Z]{1,3}', password) and \
+							re.search(r'[a-z]{1,3}', password) and \
+							re.search(r'[0-9]{1,3}', password) and \
+							re.search(r'[!@$&]{1,3}', password):
+						cur.execute("SELECT * FROM participant WHERE versity_id='%s' OR email='%s'" % (
+						request.POST["versity_id"], request.POST["email"]))
+						user_check = cur.fetchall()
+						if len(user_check) > 0:
+							messages.error(request, "User already exists")
+						else:
+							cur.execute(
+								"INSERT INTO participant(f_name, l_name, password, versity_id, email) VALUES('%s', '%s', '%s', '%s', '%s')" % (
+									request.POST["f_name"], request.POST["l_name"], request.POST["password1"],
+									request.POST["versity_id"], request.POST["email"]))
+							full_name = request.POST["f_name"] + " " + request.POST["l_name"]
+							confirm_id = uuid_gen()
+							cur.execute(
+								"INSERT INTO email_activation(confirm_id, is_used, email) VALUES('%s', '%s', '%s')" % (
+									confirm_id, 0, request.POST["email"]))
+							email_service(request.POST["email"], full_name, user_type, confirm_id)
+							return redirect("/registration/success/")
+					else:
+						messages.error(request, "Password weak! Please follow the hint")
+		return render(request, "contest/registration_participant.html")
 
 
 def login_view(request):
-	if request.session.get("user_id"):
-		return redirect("/contests/")
 	if request.method == "POST":
-		try:
-			user = models.Member.objects.get(user_id=request.POST["id"])
-		except:
-			user = None
-		if user and user.password == request.POST["password"]:
-			request.session["user_id"] = user.user_id
-			return redirect("/contests/")
-		else:
-			messages.error(request, "Login error!")
-			return redirect("/login/")
+		if request.POST["user_type"] == "admin":
+			cur.execute("SELECT * FROM judge WHERE user_id='%s' OR email='%s'" % (
+			request.POST.get("id"), request.POST.get("id")))
+			admin_check = cur.fetchone()
+			if not admin_check:
+				messages.error(request, "Not registered")
+			else:
+				if admin_check[6] != 1:
+					messages.error(request, "You're not an admin")
+				else:
+					if admin_check[4] != request.POST["password"]:
+						messages.error(request, "Password error")
+					else:
+						# login and store session [user_id, user_type]
+						pass
+		elif request.POST["user_type"] == "judge":
+			cur.execute("SELECT * FROM judge WHERE user_id='%s' OR email='%s'" % (
+			request.POST.get("id"), request.POST.get("id")))
+			judge_check = cur.fetchone()
+			if not judge_check:
+				messages.error(request, "Not registered as judge")
+			else:
+				if judge_check[4] != request.POST["password"]:
+					messages.error(request, "Password error")
+				else:
+					if judge_check[7] != 1:
+						messages.error(request, "Account not confirmed")
+					else:
+						request.session["user_id"] = judge_check[0]
+						request.session["user_type"] = "judge"
+						return redirect("/contests/")
 
-	return render(request, "contest/login.html", {})
+		elif request.POST["user_type"] == "participant":
+			cur.execute("SELECT * FROM participant WHERE versity_id='%s' OR email='%s'" % (
+			request.POST.get("id"), request.POST.get("id")))
+			parti_check = cur.fetchone()
+			if not parti_check:
+				messages.error(request, "Not registered as participant")
+			else:
+				if parti_check[4] != request.POST["password"]:
+					messages.error(request, "Password error")
+				else:
+					if parti_check[6] != 1:
+						messages.error(request, "Account not confirmed")
+					else:
+						request.session["user_id"] = parti_check[0]
+						request.session["user_type"] = "participant"
+						return redirect("/contests/")
+
+	return render(request, "contest/Login.html")
 
 
 def logout_view(request):
 	del request.session["user_id"]
+	del request.session["user_type"]
 	return redirect("/login/")
 
-def recovery_view(request):
+
+def success_view(request):
+	return render(request, "contest/registration_success.html")
+
+
+def resend_email(request):
 	if request.method == "POST":
-		try:
-			user = models.Member.objects.get(recovery_id=request.POST["recovery_id"])
-			messages.success(request, "Your password is: " + user.password)
-		except:
-			messages.error(request, "Id not found!")
-	return render(request, "contest/recovery.html", {})
+		if request.POST["user_type"] == "judge":
+			cur.execute("SELECT * FROM judge WHERE email='%s'" % (request.POST["email"]))
+			email_check = cur.fetchall()
+			if len(email_check) < 1:
+				messages.error(request, "Email not registered")
+			else:
+				messages.error(request, "Email sent again successfully!")
+				# resend_email
+				pass
+		elif request.POST["user_type"] == "participant":
+			cur.execute("SELECT * FROM participant WHERE email='%s'" % (request.POST["email"]))
+			email_check = cur.fetchall()
+			if len(email_check) < 1:
+				messages.error(request, "Email not registered")
+			else:
+				# resend_email
+				messages.error(request, "Email sent again successfully!")
+				pass
+	return render(request, "contest/email_resend.html")
+
+
+def registration_confirmation(request, user_type, confirm_id):
+	if user_type == "judge":
+		cur.execute("SELECT * FROM email_activation WHERE confirm_id='%s'" % confirm_id)
+		email_check = cur.fetchone()
+		if email_check[2] == 1:
+			return HttpResponse("Already confirmed")
+		else:
+			cur.execute("UPDATE judge SET approved=1 WHERE email='%s'" % email_check[0])
+			cur.execute("UPDATE email_activation SET is_used=1 WHERE email='%s'" % email_check[0])
+			return HttpResponse("Confirmed")
+
+	elif user_type == "participant":
+		cur.execute("SELECT * FROM email_activation WHERE confirm_id='%s'" % confirm_id)
+		email_check = cur.fetchone()
+		if email_check[2] == 1:
+			return HttpResponse("Already confirmed")
+		else:
+			cur.execute("UPDATE participant SET is_approved=1 WHERE email='%s'" % email_check[0])
+			cur.execute("UPDATE email_activation SET is_used=1 WHERE email='%s'" % email_check[0])
+			return HttpResponse("Confirmed")
 
 
 def contest_list(request):
 	if not request.session.get("user_id"):
 		return redirect("/login/")
-	contests = models.Contest.objects.all()
+	contests = None
 	return render(request, "contest/contestlist.html", {"contests": contests})
-
-
-def question_detail(request, id):
-	if not request.session.get("user_id"):
-		return redirect("/login/")
-	question = models.Question.objects.get(pk=id)
-	return render(request, "contest/question_detail.html", {"question": question})
-
-
-def contest_detail(request, id):
-	if not request.session.get("user_id"):
-		return redirect("/login/")
-
-	now = time.ctime()
-	print(now)
-	contest = models.Contest.objects.get(id=id)
-	contest_time = contest.contest_date
-	print(contest_time)
-	questions = models.Question.objects.filter(contest_id=contest.id)
-	return render(request, "contest/contest_detail.html", {"questions": questions, "contest_name": contest.name})
-
-def account_detail(request):
-	if not request.session.get("user_id"):
-		return redirect("/login/")
-	user = models.Member.objects.get(user_id=request.session["user_id"])
-	#contests = user.contests.values_list("pk", flat=True)
-	solutions = models.Solution.objects.filter(participant_id=user.id)
-	#print(contests)
-	contests = user.contestpoint_set.count()
-	print(contests)
-	return render(request, "contest/account_detail.html", {"user": user})
-
-def ranking_list(request):
-	if not request.session.get("user_id"):
-		return redirect("/login/")
-	users = models.Member.objects.all().order_by("-total_point")
-	return render(request, "contest/ranking_list.html", {"users": users})
-
-def ranking_list_contest(request, id):
-	if not request.session.get("user_id"):
-		return redirect("/login/")
-	contest = models.Contest.objects.get(pk=id)
-	users = contest.member_set.count()
-	a = models.ContestPoint.objects.filter(contest=contest).order_by("-point").order_by("-submission_date")
-	return render(request, "contest/ranking_list_contest.html", {"contest_data": a, "contest": contest})
-
-def report_generate(request, id):
-	contest = models.Contest.objects.get(pk=id)
-	a = models.ContestPoint.objects.filter(contest=contest).order_by("-point").order_by("-submission_date")
-	return render(request, "contest/report.html", {"contest_data": a, "contest": contest})
-
-def submit_solution(request):
-	if not request.session.get("user_id"):
-		return redirect("/login/")
-	question = models.Question.objects.get(pk=request.POST["question_id"])
-	participant = models.Member.objects.get(user_id=request.session["user_id"])
-	contest = models.Contest.objects.get(pk=question.contest_id)
-	print(request.session["user_id"])
-	try:
-		solution_check = models.Solution.objects.get(question_id=question.id, participant_id=participant.id)
-	except:
-		solution_check = None
-
-	if solution_check:
-		messages.error(request, "Sorry, you already submitted the solution!")
-		return redirect(request.META["HTTP_REFERER"])
-
-	else:
-		solution = models.Solution.objects.create(
-			question=question,
-			participant=participant,
-			body=request.POST["solution"]
-		)
-		a = models.ContestPoint.objects.create(contest=contest, member=participant)
-		#contest.member_set.add(participant)
-		if request.POST["solution"] == question.correct_ans:
-			a.point = question.point
-			participant.total_point += question.point
-			a.save()
-			participant.save()
-	messages.success(request, "Your solution submitetd successfully")
-	return redirect(request.META["HTTP_REFERER"])
-
-
-
-
-
-
-
-
-
-
-
 

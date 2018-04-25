@@ -1,46 +1,41 @@
-from django.db import models
-from django.contrib.auth.models import User
-
-
-class Contest(models.Model):
-	name = models.CharField(max_length=100)
-	contest_date = models.DateTimeField()
-
-	def __str__(self):
-		return self.name
-
-class Member(models.Model):
-	is_judge = models.BooleanField(default=False)
-	first_name = models.CharField(max_length=100, default='')
-	last_name = models.CharField(max_length=100, default='')
-	recovery_id = models.CharField(max_length=100, blank=True, null=True)
-	password = models.CharField(max_length=100, blank=True, null=True)
-	is_participant = models.BooleanField(default=False)
-	user_id = models.CharField(max_length=8, default='')
-	contests = models.ManyToManyField(Contest, through="ContestPoint", blank=True, null=True)
-	total_point = models.IntegerField(default=0)
-	date_joined = models.DateTimeField(auto_now_add=True, blank=True, null=True)
-
-	def __str__(self):
-		return self.first_name + self.last_name
-
-class ContestPoint(models.Model):
-	contest = models.ForeignKey(Contest, on_delete=models.CASCADE)
-	member = models.ForeignKey(Member, on_delete=models.CASCADE)
-	point = models.IntegerField(default=0)
-	submission_date = models.DateTimeField(auto_now_add=True, blank=True, null=True)
-
-class Question(models.Model):
-	body = models.TextField()
-	name = models.CharField(max_length=100)
-	input = models.TextField()
-	samples = models.TextField()
-	point = models.IntegerField()
-	correct_ans = models.TextField()
-	judge = models.ForeignKey(User, on_delete=models.CASCADE)
-	contest = models.ForeignKey(Contest, on_delete=models.CASCADE)
-
-class Solution(models.Model):
-	body = models.TextField()
-	question = models.ForeignKey(Question, on_delete=models.CASCADE)
-	participant = models.ForeignKey(Member, on_delete=models.CASCADE)
+# from django.db import models
+# from django.contrib.auth.models import User, AbstractUser
+#
+#
+# class Contest(models.Model):
+# 	name = models.CharField(max_length=100)
+# 	contest_date = models.DateTimeField()
+#
+# 	def __str__(self):
+# 		return self.name
+#
+# class Member(AbstractUser):
+# 	is_judge = models.BooleanField(default=False)
+# 	first_name = models.CharField(max_length=100, default='')
+# 	last_name = models.CharField(max_length=100, default='')
+# 	recovery_id = models.CharField(max_length=100, blank=True, null=True)
+# 	password = models.CharField(max_length=100, blank=True, null=True)
+# 	is_participant = models.BooleanField(default=False)
+# 	user_id = models.CharField(max_length=8, default='')
+# 	contests = models.ManyToManyField(Contest)
+# 	total_point = models.IntegerField(default=0)
+# 	date_joined = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+#
+# 	def __str__(self):
+# 		return self.first_name + self.last_name
+#
+#
+# class Question(models.Model):
+# 	body = models.TextField()
+# 	name = models.CharField(max_length=100)
+# 	input = models.TextField()
+# 	samples = models.TextField()
+# 	point = models.IntegerField()
+# 	correct_ans = models.TextField()
+# 	judge = models.ForeignKey(Member, on_delete=models.CASCADE)
+# 	contest = models.ForeignKey(Contest, on_delete=models.CASCADE)
+#
+# class Solution(models.Model):
+# 	body = models.TextField()
+# 	question = models.ForeignKey(Question, on_delete=models.CASCADE)
+# 	participant = models.ForeignKey(Member, on_delete=models.CASCADE)

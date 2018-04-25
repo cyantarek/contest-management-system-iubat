@@ -1,0 +1,25 @@
+
+{% extends 'contest/base.html' %}
+
+{% block auth_cont %}
+    <h2>Enter email for resending confirmation</h2>
+    {% for m in messages %}
+        <p style="color: #ff731e; font-weight: bold;">{{ m.message }}</p>
+    {% endfor %}
+    <form action="." method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="FName">Email:</label>
+            <input type="email" name="email" class="form-control" id="" placeholder="Email used for registration" required>
+        </div>
+        <div class="form-group">
+            <label for="FName">User Type</label>
+            <select name="user_type" class="form-control">
+                <option value="judge">Judge</option>
+                <option value="participant">Participant</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-success">Resend</button>
+    </form>
+
+{% endblock %}

@@ -17,18 +17,36 @@
                     <li><a href="/ranking/">Ranking</a></li>
                 </ul>
                 <ul class="nav navbar-nav navbar-right">
+                {% if request.session.user_type == "judge" %}
                     <li><a href="/admin/"><span class="glyphicon glyphicon-user"></span> Judge Panel</a></li>
+                {% endif %}
                     {% if not request.session.user_id %}
-                    <li><a href="/registration/"><span class="glyphicon glyphicon-user"></span> Registration</a></li>
-                    <li><a href="/login/"><span class="glyphicon glyphicon-log-in"></span> Login</a></li>
+                        <li>
+                            <div class="dropdown" style="padding-top: 6%">
+                                <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">
+                                    <span class="glyphicon glyphicon-user"></span> Registration
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/registration/judge/">Judge</a></li>
+                                    <li><a href="/registration/participant/">Participant</a></li>
+                                </ul>
+                            </div>
+
+                        </li>
+                        <li><a href="/login/"><span class="glyphicon glyphicon-log-in"></span> Login</a></li>
                     {% else %}
-                    <li><a href="/account/"><span class="glyphicon glyphicon-user"></span> Account</a></li>
-                    <li><a href="/logout/"><span class="glyphicon glyphicon-log-in"></span> Logout</a></li>
+                        <li><a href="/account/"><span class="glyphicon glyphicon-user"></span> Account</a></li>
+                        <li><a href="/logout/"><span class="glyphicon glyphicon-log-in"></span> Logout</a></li>
                     {% endif %}
                 </ul>
             </div>
         </nav>
-        <div class="container">
+        <div class="container" style="width: 30%">
+            {% block auth_cont %}
+            {% endblock %}
+
+        </div>
+        <div class="container" style="width: 60%">
             {% block content %}
             {% endblock %}
 

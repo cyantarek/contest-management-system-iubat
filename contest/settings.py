@@ -121,3 +121,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
 STATIC_URL = '/static/'
+
+BROKER_URL = "amqp://guest:aaaaa@localhost:5672//"
+
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = "587"
+EMAIL_HOST_USER = "logformat4@gmail.com"
+EMAIL_HOST_PASSWORD = "logformat444"
+EMAIL_USE_TLS = True

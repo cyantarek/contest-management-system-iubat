@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="Sqlite" id="Project_5ed93af" template="Default" database="Sqlite" >
+	<schema name="Default" schemaname="Default" >
+		<table name="contest" >
+			<column name="id" type="integer" jt="4" mandatory="y" />
+			<column name="name" type="varchar" length="100" jt="12" />
+			<column name="contest_date" type="datetime" jt="93" />
+			<index name="Pk_contest_id" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+		</table>
+		<table name="judge" >
+			<column name="id" type="integer" jt="4" mandatory="y" />
+			<column name="f_name" type="varchar" length="100" jt="12" mandatory="y" />
+			<column name="l_name" type="varchar" length="100" jt="12" mandatory="y" />
+			<column name="user_id" type="varchar" length="10" jt="12" mandatory="y" />
+			<column name="password" type="varchar" length="10" jt="12" mandatory="y" />
+			<column name="join_date" type="datetime" jt="93" >
+				<defo>CURRENT_TIMESTAMP</defo>
+			</column>
+			<column name="is_admin" type="boolean" jt="-7" >
+				<defo>0</defo>
+			</column>
+			<column name="approved" type="boolean" jt="-7" >
+				<defo>0</defo>
+			</column>
+			<column name="email" type="varchar" length="100" jt="12" />
+			<index name="Pk_judge_id" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+		</table>
+		<table name="judge_contest" >
+			<column name="judge_id" type="integer" jt="4" />
+			<column name="contest_id" type="integer" jt="4" />
+			<index name="Idx_judge_contest_contest_id" unique="NORMAL" >
+				<column name="contest_id" />
+			</index>
+			<index name="Idx_judge_contest_judge_id" unique="NORMAL" >
+				<column name="judge_id" />
+			</index>
+			<fk name="Fk_judge_contest" to_schema="Default" to_table="contest" >
+				<fk_column name="contest_id" pk="id" />
+			</fk>
+			<fk name="Fk_judge_contest_0" to_schema="Default" to_table="judge" >
+				<fk_column name="judge_id" pk="id" />
+			</fk>
+		</table>
+		<table name="participant" >
+			<column name="id" type="integer" jt="4" mandatory="y" />
+			<column name="f_name" type="varchar" length="100" jt="12" />
+			<column name="l_name" type="varchar" length="100" jt="12" />
+			<column name="versity_id" type="varchar" length="8" jt="12" mandatory="y" />
+			<column name="password" type="varchar" length="10" jt="12" mandatory="y" />
+			<column name="email" type="varchar" length="100" jt="12" />
+			<index name="Pk_participant_id" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+		</table>
+		<table name="participant_contest" >
+			<column name="participant_id" type="integer" jt="4" />
+			<column name="contest_id" type="integer" jt="4" />
+			<column name="point" type="integer" jt="4" />
+			<index name="Idx_participant_contest_contest_id" unique="NORMAL" >
+				<column name="contest_id" />
+			</index>
+			<index name="Idx_participant_contest_participant_id" unique="NORMAL" >
+				<column name="participant_id" />
+			</index>
+			<fk name="Fk_participant_contest" to_schema="Default" to_table="contest" >
+				<fk_column name="contest_id" pk="id" />
+			</fk>
+			<fk name="Fk_participant_contest_0" to_schema="Default" to_table="participant" >
+				<fk_column name="participant_id" pk="id" />
+			</fk>
+		</table>
+		<table name="question" >
+			<column name="id" type="integer" jt="4" mandatory="y" />
+			<column name="name" type="varchar" length="100" jt="12" />
+			<column name="inputs" type="varchar" length="100" jt="12" />
+			<column name="correct_ans" type="varchar" length="100" jt="12" />
+			<column name="point" type="integer" jt="4" />
+			<column name="judge_id" type="integer" jt="4" />
+			<column name="contest_id" type="integer" jt="4" />
+			<index name="Pk_question_id" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<index name="Idx_question_judge_id" unique="NORMAL" >
+				<column name="judge_id" />
+			</index>
+			<index name="Idx_question_contest_id" unique="NORMAL" >
+				<column name="contest_id" />
+			</index>
+			<fk name="Fk_question" to_schema="Default" to_table="judge" >
+				<fk_column name="judge_id" pk="id" />
+			</fk>
+			<fk name="Fk_question_0" to_schema="Default" to_table="contest" >
+				<fk_column name="contest_id" pk="id" />
+			</fk>
+		</table>
+		<table name="solution" >
+			<column name="id" type="integer" jt="4" mandatory="y" />
+			<column name="ans" type="varchar" length="100" jt="12" />
+			<column name="submission_datetime" type="datetime" jt="93" >
+				<defo>CURRENT_TIMESTAMP</defo>
+			</column>
+			<column name="question_id" type="integer" jt="4" />
+			<column name="participant_id" type="integer" jt="4" />
+			<index name="Pk_solution_id" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<index name="Idx_solution_question_id" unique="NORMAL" >
+				<column name="question_id" />
+			</index>
+			<index name="Idx_solution_participant_id" unique="NORMAL" >
+				<column name="participant_id" />
+			</index>
+			<fk name="Fk_solution" to_schema="Default" to_table="question" >
+				<fk_column name="question_id" pk="id" />
+			</fk>
+			<fk name="Fk_solution_0" to_schema="Default" to_table="participant" >
+				<fk_column name="participant_id" pk="id" />
+			</fk>
+		</table>
+		<table name="sqlite_sequence" >
+			<column name="name" type="set" length="2000000000" decimal="10" jt="12" />
+			<column name="seq" type="set" length="2000000000" decimal="10" jt="12" />
+		</table>
+	</schema>
+	<connector name="Sqlite" database="Sqlite" driver_class="org.sqlite.JDBC" driver_jar="sqlite-jdbc-3.19.3.jar" driver_desc="Standard" host="localhost" port="7210" instance="E:/Development World/Development World Resources Backup 14-1-18/Projects/Professional/Contest_Management_System/contest/db.sqlite3" />
+	<layout name="Default Layout" id="Layout_e261b3" show_relation="columns" >
+		<entity schema="Default" name="contest" color="bcd5f1" x="330" y="255" />
+		<entity schema="Default" name="participant_contest" color="bcd5f1" x="210" y="60" />
+		<entity schema="Default" name="judge_contest" color="bcd5f1" x="525" y="60" />
+		<entity schema="Default" name="question" color="bcd5f1" x="675" y="285" />
+		<entity schema="Default" name="solution" color="bcd5f1" x="90" y="375" />
+		<entity schema="Default" name="participant" color="bcd5f1" x="45" y="60" />
+		<entity schema="Default" name="judge" color="bcd5f1" x="690" y="45" />
+	</layout>
+</project>
