@@ -104,8 +104,9 @@ def login_view(request):
 					if admin_check[4] != request.POST["password"]:
 						messages.error(request, "Password error")
 					else:
-						# login and store session [user_id, user_type]
-						pass
+						request.session["user_id"] = admin_check[0]
+						request.session["user_type"] = "admin"
+						return redirect("/contests/")
 		elif request.POST["user_type"] == "judge":
 			cur.execute("SELECT * FROM judge WHERE user_id='%s' OR email='%s'" % (
 			request.POST.get("id"), request.POST.get("id")))
@@ -139,6 +140,9 @@ def login_view(request):
 						request.session["user_id"] = parti_check[0]
 						request.session["user_type"] = "participant"
 						return redirect("/contests/")
+
+	if request.session.get("user_id"):
+		return redirect("/contests/")
 
 	return render(request, "contest/Login.html")
 
@@ -204,3 +208,5 @@ def contest_list(request):
 	contests = None
 	return render(request, "contest/contestlist.html", {"contests": contests})
 
+def contest_add(request):
+	return render(request, "contest/add_contest.html", {})

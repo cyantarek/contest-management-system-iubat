@@ -11,6 +11,7 @@ urlpatterns = [
 	path("resend_email/", views.resend_email),
 	path("logout/", views.logout_view),
 	path("contests/", views.contest_list),
+	path("contests/add/", views.contest_add),
 	# path("question/<id>/", views.question_detail),
 	# path("contests/<id>/", views.contest_detail),
 	# path("account/", views.account_detail),
